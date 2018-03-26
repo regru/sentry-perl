@@ -4,10 +4,15 @@ package Reg::Sentry;
 
 =head1 NAME
 
-Отсылает сообщение в сервис интеграции сообщений об ошибках Sentry.
+Reg::Sentry
 
-https://docs.sentry.io/clientdev/overview/
+=head1 MAINTAINERS
 
+domain-team
+
+=head1 AUTHORS
+
+Pavel Serikov <serikov@reg.ru>
 
 =cut
 
@@ -27,27 +32,23 @@ use Carp;
     $sentry->fatal( 'msg' );
     $sentry->error( 'msg' );
     $sentry->warn ( 'msg' );
+    $sentry->warning ( 'msg' );
     $sentry->info ( 'msg' );
     $sentry->debug( 'msg' );
     $sentry->error( $error_msg, extra => { var1 => $var1 } );
 
+    All this methods is getting hash with event id as result
+
 =cut
 
 my @LEVELS;
-
 BEGIN {
-    # Создаём методы отправки событий разных уровней. warning это alias для warn.
-    # Принимают список параметров как в методе _send.
-
     @LEVELS = qw( fatal error warning warn info debug );
-
     no strict 'refs';
     for my $level ( @LEVELS ) {
         *{ __PACKAGE__ . "::$level" } = subname $level => sub { shift->_send( shift, level => $level, @_ ) };
     }
 };
-
-
 
 
 =head1 METHODS
@@ -130,6 +131,7 @@ sub _send {
     $req->header( 'Content-Type' => 'application/json' );
     $req->content( encode_json \%json);
     my $res = $ua->request( $req );
+    decode_json ($res->content);
 }
 
 1;
