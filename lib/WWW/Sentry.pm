@@ -1,28 +1,58 @@
-package Reg::Sentry2;
+package WWW::Sentry;
 
 =encoding utf8
 
 =head1 NAME
 
-Отсылает сообщение в сервис интеграции сообщений об ошибках Sentry.
+WWW::Sentry
 
-=cut
+=head1 DESCRIPTION
+
+Module for sending messages to Sentry that implements Sentry reporting API
 
 =head1 SYNOPSIS
 
-    my $sentry = Reg::Sentry->new(
-        dsn => 'http://public_key:secret_key@example.com/project-id',
-        tags => { type => 'autocharge' }
-    );
+    my $sentry = Reg::Sentry->new( $dsn, tags => { type => 'autocharge' } );
+
     $sentry->fatal( 'msg' );
     $sentry->error( 'msg' );
     $sentry->warn ( 'msg' );
     $sentry->warning ( 'msg' );  # alias to warn
     $sentry->info ( 'msg' );
     $sentry->debug( 'msg' );
+
     $sentry->error( $error_msg, extra => { var1 => $var1 } );
 
-All this methods is getting hash with event id as result
+    All this methods return event id as result or die with error
+
+    %params:
+        message*  -- error message
+        event_id  -- message id (by default it's random)
+        level     -- 'fatal', 'error', 'warning', 'info', 'debug' ('error' by default)
+        logger    -- the name of the logger which created the record, e.g 'sentry.errors'
+        platform  -- A string representing the platform the SDK is submitting from. E.g. 'python'
+        culprit   -- The name of the transaction (or culprit) which caused this exception. For example, in a web app, this might be the route name: /welcome/
+        tags      -- tags for this event (could be array or hash )
+        server_name -- host from which the event was recorded
+        modules   -- a list of relevant modules and their versions
+        environment -- environment name, such as ‘production’ or ‘staging’.
+        extra     -- hash ref of additional data. Non scalar values are Dumperized forcely.
+
+    * - required params
+
+    All other interfaces could be also provided as %params, e.g.
+
+        stacktrace -- array ref  or string
+        user       -- hash ref user info
+
+
+See also
+
+https://docs.sentry.io/clientdev/overview/#building-the-json-packet
+https://docs.sentry.io/clientdev/attributes/
+https://docs.sentry.io/clientdev/interfaces/
+
+
 
 
 =cut
@@ -49,12 +79,18 @@ BEGIN {
 
 =head4 new
 
-Конструктор. Использование
+Constructor
 
     my $sentry = Reg::Sentry->new(
         'http://public_key:secret_key@example.com/project-id',
         sentry_version    => 5 # can be omitted
     );
+
+See also
+
+https://docs.sentry.io/clientdev/overview/#parsing-the-dsn
+
+
 
 =cut
 
@@ -69,7 +105,6 @@ sub new {
     };
 
     $self->{sentry_version} ||= 5;
-    $self->{internal_character_format} ||= 'unicode';
 
     ( my $protocol, $self->{public_key}, $self->{secret_key}, my $host_path, my $project_id )
         = $dsn =~ m{^ ( https? ) :// ( \w+ ) : ( \w+ ) @ ( .+ ) / ( \d+ ) $}ixaa;
@@ -83,26 +118,12 @@ sub new {
     bless $self, $class;
 }
 
-=head4 send
+=head4 _send
 
 Send a message to Sentry server.
 Returns the id of inserted message or dies.
 
-%params:
-    message*  -- сообщение (об ошибке)
-    event_id  -- id сообщения (по умолчанию случайный)
-    level     -- 'fatal', 'error', 'warning', 'info', 'debug' (по умолчанию 'error')
-    logger    -- наименование логгирующего модуля/скрипта
-    platform  -- платформа
-    culprit   -- место возникновения ошибки/исключения
-    tags      -- hash ref тегов
-    server_name -- сервер
-    modules   -- array ref список модулей
-    extra     -- hash ref дополнительных значений. Значения не-скаляры принудительно Dumperизируются.
-    stacktrace -- array ref  либо строка
-    user       -- hash ref инфы о пользователе
 
-См. также http://sentry.readthedocs.org/en/latest/developer/client/index.html#building-the-json-packet
 
 =cut
 
@@ -114,7 +135,7 @@ sub _send {
         $self->{sentry_version},
         time(),
         $self->{public_key},
-        'perl_client',
+        __PACKAGE__,
         $self->{secret_key},
     ;
 
@@ -143,6 +164,7 @@ sub _send {
     return $answer_ref->{id};
 }
 
+
 sub _build_message {
     my ( $self, %params ) = @_;
 
@@ -165,20 +187,17 @@ sub _build_message {
 
     if ( $params{stacktrace} ) {
         if ( !ref $params{stacktrace} ) {
-            # Стектрейс передан как строка
+            # stacktrace as string
             $data_ref->{extra}{stacktrace} = $params{stacktrace};
         }
         elsif ( ref $params{stacktrace} eq 'ARRAY' ) {
-            # Стектрейс должен быть в формате Sentry
+            # Сonverting stacktrace to Sentry format
 
-            # Выдергиваем строки из исходников
+            # Read strings from sources
             for my $frame_ref ( @{ $params{stacktrace} // [] } ) {
                 my %context = eval { _get_context_lines( $frame_ref->{abs_path}, $frame_ref->{lineno}, 5 ) };
 
                 if ( $@ ) {
-                    # Случае ошибок с кодировками (например смешение cp1251/utf8 не падаем,
-                    # а не показываем исходник)
-                    warn $@;
                     %context = ();
                 }
 
@@ -189,20 +208,19 @@ sub _build_message {
         }
     }
 
-    # dumperизируем не скаляры в extra
     my $extra_ref = $data_ref->{extra};
 
+    # Dump non scalars to extra
     $extra_ref->{ $_ } = pp( $extra_ref->{ $_ } )
         for grep { ref $extra_ref->{ $_ } } keys %$extra_ref;
 
     return $data_ref;
 }
 
-# Получить строки кода c ошибкой из исходников
+# getting code strings from sources
 sub _get_context_lines {
     my ( $package, $line, $pre_post_cnt ) = @_;
 
-    # убираем ненужный каталог из пути
     $package =~ s{^lib/}{};
 
     return  unless $line && $package && $package =~ m{^/};
@@ -229,8 +247,8 @@ sub _get_context_lines {
     );
 }
 
-# Прочитать контент из файла-исходника в cp1251 или utf8 и вернуть его во внутренней кодировке.
-# При смешении кодировок в файле будет падать.
+# Read content from source file and return in internal encoding
+# Assumes that sources are in utf8 encoding
 sub _read_source_file {
     my ( $file ) = @_;
 
@@ -242,81 +260,7 @@ sub _read_source_file {
     }
     close $src;
 
-    # Пробуем конвертить бинарный контент файла во внутренний формат из utf-8, затем из cp1251.
-    if ( my $decoded = eval { _decode_from( 'utf-8', $content ) } ) {
-        return $decoded;
-    }
-
-    return _decode_from( 'cp1251', $content );
-}
-
-
-# Декодирует бинарную строку в кодировке $encoding во внутренний формат.
-# Исходные данные не модифицируется. В случае не валидных входных данных происходит die.
-sub _decode_from {
-    my $res = Encode::decode($_[0], $_[1], Encode::DIE_ON_ERR|Encode::LEAVE_SRC);
-    _from_unicode $res;
-    $res;
-}
-
-# Преобразовывает данные из Unicode во внутренний формат
-sub _from_unicode {
-    carp "Should only be used in void context" if defined wantarray;
-    if ($self->{internal_character_format} eq 'cp1251') {
-        for (@_) {
-            confess SCALAR_NOT_REF_EXPECTED if ref;
-            eval {
-                defined and $_ = Encode::find_encoding('cp1251')->encode($_, Encode::DIE_ON_ERR|Encode::LEAVE_SRC);
-                1;
-            } or do {
-                confess "from_unicode called with "._hex_dump_string($_)." and crashed: $@";
-            }
-        }
-    }
-    return;
-}
-
-
-sub _hex_dump_string {
-    my ($str, %opts) = @_;
-    return undef unless defined $str;
-
-    # считается плохим тоном использовать is_utf8/_utf8_off, но здесь мы это делаем т.к. хотим
-    # выставить "наружу" внутренности строки
-
-    my $isutf = utf8::is_utf8($str);
-    Encode::_utf8_off($str);
-
-    # Ограничиваем размер данных (если заданно)
-    my $is_cut = 0;
-    if ( $opts{bytes_limit} ) {
-        my $str_length = length $str;
-
-        if ( $str_length > $opts{bytes_limit} ) {
-            $str = substr($str, 0, $opts{bytes_limit});
-            $is_cut = 1;
-        }
-    }
-
-    $str =~ s/\\/\\\\/g;
-    if (!$opts{keep_lf}) {
-        $str =~ s/\r/\\r/g;
-        $str =~ s/\n/\\n/g;
-    }
-    $str =~ s/\t/\\t/g;
-    $str =~ s/\"/\\\"/g;
-    $str =~ s/([\x00-\x09\x0b-\x0c\x0e-\x1f\x7f]|[[:^ascii:]])/sprintf("\\x%02X",ord($1))/eg;
-    $str = "\"$str\"" unless $opts{no_quotes};
-
-    if ( $isutf && ! $opts{no_prefix} ) {
-        $str = "(UTF-8) ".$str;
-    }
-
-    if ( $is_cut ) {
-        $str = $str . "...";
-    }
-
-    $str;
+    return utf8::decode($content);
 }
 
 
