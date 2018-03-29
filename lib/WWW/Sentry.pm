@@ -25,7 +25,7 @@ Implements Sentry reporting API https://docs.sentry.io/clientdev/
     $sentry->info ( 'msg' );
     $sentry->debug( 'msg' );
 
-    $sentry->error( $error_msg, extra => { var1 => $var1 } );
+    $sentry->error( $error_msg, extra => { var1 => $var1 }, read_sources );
 
     All this methods return event id as result or die with error
 
@@ -40,7 +40,10 @@ Implements Sentry reporting API https://docs.sentry.io/clientdev/
         server_name -- host from which the event was recorded
         modules   -- a list of relevant modules and their versions
         environment -- environment name, such as ‘production’ or ‘staging’.
-        extra     -- hash ref of additional data. Non scalar values are Dumperized forcely.
+        extra     -- hash ref of additional data. Non scalar values are Dumperized forcely
+
+        context_lines_ -- integer. reads source file and add to stacktrace specified amount of code lines around place where error occured.
+        0 by default (do not read source file)
 
     * - required params
 
@@ -202,7 +205,10 @@ sub _build_message {
 
             # Read strings from sources
             for my $frame_ref ( @{ $params{stacktrace} // [] } ) {
-                my %context = eval { _get_context_lines( $frame_ref->{abs_path}, $frame_ref->{lineno}, 5 ) };
+
+                if ($self->{context_lines}) {
+                    my %context = eval { _get_context_lines( $frame_ref->{abs_path}, $frame_ref->{lineno}, $self->{context_lines} ) };
+                }
 
                 if ( $@ ) {
                     %context = ();
