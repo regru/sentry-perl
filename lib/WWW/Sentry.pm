@@ -1,3 +1,5 @@
+# ABSTRACT: Yet another lightweight Sentry client
+
 package WWW::Sentry;
 
 =encoding utf8
@@ -8,7 +10,9 @@ WWW::Sentry
 
 =head1 DESCRIPTION
 
-Module for sending messages to Sentry that implements Sentry reporting API
+Module for sending messages to Sentry, open-source cross-platform crash reporting and aggregation platform.
+
+Implements Sentry reporting API https://docs.sentry.io/clientdev/
 
 =head1 SYNOPSIS
 
@@ -40,9 +44,10 @@ Module for sending messages to Sentry that implements Sentry reporting API
 
     * - required params
 
-    All other interfaces could be also provided as %params, e.g.
+    Attributes from other Sentry Interfaces could be also provided as %params, e.g.
 
         stacktrace -- array ref  or string
+        context_lines -- how much lines from source code will be added
         user       -- hash ref user info
 
 
@@ -156,8 +161,7 @@ sub _send {
         die $response->status_line;
     }
 
-    my $answer_ref = eval { decode_json $response->decoded_content };
-    die $@ if $@;
+    my $answer_ref = decode_json $response->decoded_content;
 
     die 'Wrong answer format' unless $answer_ref && $answer_ref->{id};
 
@@ -173,11 +177,11 @@ sub _build_message {
     my $data_ref = {
         message     => $params{message    },
         timestamp   => strftime( '%FT%X.000000Z', gmtime time ),
-        level       => $params{level      },
+        level       => $params{level      } || $self->{level} || 'info',
         logger      => $params{logger     },
         platform    => $params{platform   } || 'perl',
         culprit     => $params{culprit    } || '',
-        tags        => $params{tags       } || {},
+        tags        => $params{tags       } || $self->{tags} || {},
         server_name => $params{server_name} || hostname(),
         modules     => $params{modules    },
         extra       => $params{extra      } || {},
@@ -186,9 +190,12 @@ sub _build_message {
     };
 
     if ( $params{stacktrace} ) {
+        # Make frames
+        # # https://docs.sentry.io/clientdev/interfaces/stacktrace/
         if ( !ref $params{stacktrace} ) {
             # stacktrace as string
-            $data_ref->{extra}{stacktrace} = $params{stacktrace};
+            # was $data_ref->{extra}{stacktrace} = $params{stacktrace} , why ?
+            $data_ref->{stacktrace} = $params{stacktrace};
         }
         elsif ( ref $params{stacktrace} eq 'ARRAY' ) {
             # Сonverting stacktrace to Sentry format

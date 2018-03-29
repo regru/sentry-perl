@@ -1,6 +1,6 @@
 # NAME
 
-WWW::Sentry
+WWW::Sentry - Yet another lightweight Sentry client
 
 # VERSION
 
@@ -19,7 +19,33 @@ version 0.01
 
     $sentry->error( $error_msg, extra => { var1 => $var1 } );
 
-All this methods is getting event id as result or die with error
+    All this methods return event id as result or die with error
+
+    %params:
+        message*  -- error message
+        event_id  -- message id (by default it's random)
+        level     -- 'fatal', 'error', 'warning', 'info', 'debug' ('error' by default)
+        logger    -- the name of the logger which created the record, e.g 'sentry.errors'
+        platform  -- A string representing the platform the SDK is submitting from. E.g. 'python'
+        culprit   -- The name of the transaction (or culprit) which caused this exception. For example, in a web app, this might be the route name: /welcome/
+        tags      -- tags for this event (could be array or hash )
+        server_name -- host from which the event was recorded
+        modules   -- a list of relevant modules and their versions
+        environment -- environment name, such as ‘production’ or ‘staging’.
+        extra     -- hash ref of additional data. Non scalar values are Dumperized forcely.
+
+    * - required params
+
+    All other interfaces could be also provided as %params, e.g.
+
+        stacktrace -- array ref  or string
+        user       -- hash ref user info
+
+See also
+
+https://docs.sentry.io/clientdev/overview/#building-the-json-packet
+https://docs.sentry.io/clientdev/attributes/
+https://docs.sentry.io/clientdev/interfaces/
 
 #### new
 
@@ -34,40 +60,20 @@ See also
 
 https://docs.sentry.io/clientdev/overview/#parsing-the-dsn
 
-#### send
+#### \_send
 
 Send a message to Sentry server.
 Returns the id of inserted message or dies.
 
-%params:
-    message\*  -- error message
-    event\_id  -- message id (by default it's random)
-    level     -- 'fatal', 'error', 'warning', 'info', 'debug' ('error' by default)
-    logger    -- the name of the logger which created the record, e.g 'sentry.errors'
-    platform  -- A string representing the platform the SDK is submitting from. E.g. 'python'
-    culprit   -- The name of the transaction (or culprit) which caused this exception. For example, in a web app, this might be the route name: /welcome/
-    tags      -- tags for this event (could be array or hash )
-    server\_name -- host from which the event was recorded
-    modules   -- a list of relevant modules and their versions
-    environment -- environment name, such as ‘production’ or ‘staging’.
-    extra     -- hash ref of additional data. Non scalar values are Dumperized forcely.
+# DESCRIPTION
 
-\* - required params
+Module for sending messages to Sentry, open-source cross-platform crash reporting and aggregation platform.
 
-All other interfaces could be also provided as %params, e.g.
-
-    stacktrace -- array ref  or string
-    user       -- hash ref user info
-
-See also
-
-https://docs.sentry.io/clientdev/overview/#building-the-json-packet
-https://docs.sentry.io/clientdev/attributes/
-https://docs.sentry.io/clientdev/interfaces/
+Implements Sentry reporting API https://docs.sentry.io/clientdev/
 
 # NAME
 
-Module for sending messages to Sentry that implements Sentry reporting API
+WWW::Sentry
 
 # AUTHOR
 
