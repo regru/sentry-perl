@@ -33,15 +33,16 @@ All this methods return event id as result or die with error
 
     %params:
         message*  -- error message
-        event_id  -- message id (by default it's random)
-        level     -- 'fatal', 'error', 'warning', 'info', 'debug' ('error' by default)
+        event_id  -- message id (by default it's random, but you can generate it manually on client side)
+        platform*  -- A string representing the platform the SDK is submitting from. E.g. 'python', 'perl by default'
         logger    -- the name of the logger which created the record, e.g 'sentry.errors'
-        platform  -- A string representing the platform the SDK is submitting from. E.g. 'python'
+        level     -- 'fatal', 'error', 'warning', 'info', 'debug' ('error' by default)
         culprit   -- The name of the transaction (or culprit) which caused this exception. For example, in a web app, this might be the route name: /welcome/
-        tags      -- tags for this event (could be array or hash )
         server_name -- host from which the event was recorded
-        modules   -- a list of relevant modules and their versions
+        release     -- the release version of the application
+        tags      -- tags for this event (could be array or hash )
         environment -- environment name, such as ‘production’ or ‘staging’.
+        modules   -- a list of relevant modules and their versions
         extra     -- hash ref of additional data. Non scalar values are Dumperized forcely
 
     * - required params
@@ -103,6 +104,7 @@ use POSIX;
 use JSON::XS;
 use Sub::Name;
 use Carp;
+use Class::Tiny;
 
 my @LEVELS;
 BEGIN {
@@ -127,19 +129,18 @@ my @INTERFACES = (
     'sdk'
 );
 
+
 =head2 new
 
 Constructor
 
     my $sentry = Reg::Sentry->new(
-        'http://public_key:secret_key@example.com/project-id',
-        sentry_version    => 5 # can be omitted
+        'http://public_key:secret_key@example.com/project-id'
     );
 
 See also
 
 https://docs.sentry.io/clientdev/overview/#parsing-the-dsn
-
 
 
 =cut
@@ -153,8 +154,6 @@ sub new {
         ua => LWP::UserAgent->new( timeout => 10 ),
         %params,
     };
-
-    $self->{sentry_version} ||= 5;
 
     ( my $protocol, $self->{public_key}, $self->{secret_key}, my $host_path, my $project_id )
         = $dsn =~ m{^ ( https? ) :// ( \w+ ) : ( \w+ ) @ ( .+ ) / ( \d+ ) $}ixaa;
@@ -221,7 +220,7 @@ sub _build_message {
         logger      => $params{logger     },
         platform    => $params{platform   } || 'perl',
         culprit     => $params{culprit    } || '',
-        tags        => $params{tags       } || $self->{tags} || {},
+        tags        => { %{ $self->{tags} }, %{ $params{tags} } } || {},
         server_name => $params{server_name} || hostname(),
         modules     => $params{modules    },
         extra       => $params{extra      } || {},

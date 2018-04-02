@@ -8,7 +8,7 @@ version 0.01
 
 # SYNOPSIS
 
-    my $sentry = Reg::Sentry->new( $dsn, tags => { type => 'autocharge' } );
+    my $sentry = WWW::Sentry->new( $dsn, tags => { type => 'autocharge' } );
 
     $sentry->fatal( 'msg' );
     $sentry->error( 'msg' );
@@ -17,21 +17,22 @@ version 0.01
     $sentry->info ( 'msg' );
     $sentry->debug( 'msg' );
 
-    $sentry->error( $error_msg, extra => { var1 => $var1 }, read_sources );
+    $sentry->error( $error_msg, extra => { var1 => $var1 } );
 
 All this methods return event id as result or die with error
 
     %params:
         message*  -- error message
-        event_id  -- message id (by default it's random)
-        level     -- 'fatal', 'error', 'warning', 'info', 'debug' ('error' by default)
+        event_id  -- message id (by default it's random, but you can generate it manually on client side)
+        platform*  -- A string representing the platform the SDK is submitting from. E.g. 'python', 'perl by default'
         logger    -- the name of the logger which created the record, e.g 'sentry.errors'
-        platform  -- A string representing the platform the SDK is submitting from. E.g. 'python'
+        level     -- 'fatal', 'error', 'warning', 'info', 'debug' ('error' by default)
         culprit   -- The name of the transaction (or culprit) which caused this exception. For example, in a web app, this might be the route name: /welcome/
-        tags      -- tags for this event (could be array or hash )
         server_name -- host from which the event was recorded
-        modules   -- a list of relevant modules and their versions
+        release     -- the release version of the application
+        tags      -- tags for this event (could be array or hash )
         environment -- environment name, such as ‘production’ or ‘staging’.
+        modules   -- a list of relevant modules and their versions
         extra     -- hash ref of additional data. Non scalar values are Dumperized forcely
 
     * - required params
@@ -98,8 +99,7 @@ https://docs.sentry.io/clientdev/interfaces/
 Constructor
 
     my $sentry = Reg::Sentry->new(
-        'http://public_key:secret_key@example.com/project-id',
-        sentry_version    => 5 # can be omitted
+        'http://public_key:secret_key@example.com/project-id'
     );
 
 See also
