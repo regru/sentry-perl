@@ -18,7 +18,7 @@ It doesn't form stacktrace, just send it
 
 =head1 SYNOPSIS
 
-    my $sentry = Reg::Sentry->new( $dsn, tags => { type => 'autocharge' } );
+    my $sentry = WWW::Sentry->new( $dsn, tags => { type => 'autocharge' } );
 
     $sentry->fatal( 'msg' );
     $sentry->error( 'msg' );
