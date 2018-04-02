@@ -27,7 +27,7 @@ It doesn't form stacktrace, just send it
     $sentry->info ( 'msg' );
     $sentry->debug( 'msg' );
 
-    $sentry->error( $error_msg, extra => { var1 => $var1 }, read_sources );
+    $sentry->error( $error_msg, extra => { var1 => $var1 } );
 
 All this methods return event id as result or die with error
 
