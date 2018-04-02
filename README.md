@@ -17,9 +17,9 @@ version 0.01
     $sentry->info ( 'msg' );
     $sentry->debug( 'msg' );
 
-    $sentry->error( $error_msg, extra => { var1 => $var1 } );
+    $sentry->error( $error_msg, extra => { var1 => $var1 }, read_sources );
 
-    All this methods return event id as result or die with error
+All this methods return event id as result or die with error
 
     %params:
         message*  -- error message
@@ -32,22 +32,68 @@ version 0.01
         server_name -- host from which the event was recorded
         modules   -- a list of relevant modules and their versions
         environment -- environment name, such as ‘production’ or ‘staging’.
-        extra     -- hash ref of additional data. Non scalar values are Dumperized forcely.
+        extra     -- hash ref of additional data. Non scalar values are Dumperized forcely
 
     * - required params
 
-    All other interfaces could be also provided as %params, e.g.
+Sentry Interfaces could be also provided as %params, e.g.
 
-        stacktrace -- array ref  or string
-        user       -- hash ref user info
+    $sentry->info ( 'msg', stacktrace => {
+        frames => [{
+        "abs_path" => "/real/file/name.pl",
+        "filename" => "file/name.pl",
+        "function" => "myfunction",
+        "vars" => {
+            "key" => "value"
+            }
+        }]
+    });
 
-See also
+    $sentry->warn ( 'msg', user =>  {
+        "id" => "unique_id",
+        "username" => "my_user",
+        "email" => "foo@example.com",
+        "ip_address" => "127.0.0.1",
+        "subscription" => "basic"
+    });
+
+List of supported additional parameters with link to corresponded Sentry Interfaces
+
+    L<exception|https://docs.sentry.io/clientdev/interfaces/exception/>
+    L<message|https://docs.sentry.io/clientdev/interfaces/message/>
+    L<stacktrace|https://docs.sentry.io/clientdev/interfaces/stacktrace/>
+    L<template|https://docs.sentry.io/clientdev/interfaces/template/>
+    L<breadcrumbs|https://docs.sentry.io/clientdev/interfaces/breadcrumbs/>
+
+    L<contexts|https://docs.sentry.io/clientdev/interfaces/contexts/>
+    L<request|https://docs.sentry.io/clientdev/interfaces/request/>
+    L<threads|https://docs.sentry.io/clientdev/interfaces/threads/>
+    L<user|https://docs.sentry.io/clientdev/interfaces/user/>
+    L<debug_meta|https://docs.sentry.io/clientdev/interfaces/debug/>
+    L<repos|https://docs.sentry.io/clientdev/interfaces/repos/>
+    L<sdk|https://docs.sentry.io/clientdev/interfaces/sdk/>
+
+# DESCRIPTION
+
+Module for sending messages to Sentry, open-source cross-platform crash reporting and aggregation platform.
+
+Implements Sentry reporting API https://docs.sentry.io/clientdev/
+
+It doesn't form stacktrace, just send it
+
+# NAME
+
+WWW::Sentry
+
+# SEE ALSO
 
 https://docs.sentry.io/clientdev/overview/#building-the-json-packet
+
 https://docs.sentry.io/clientdev/attributes/
+
 https://docs.sentry.io/clientdev/interfaces/
 
-#### new
+## new
 
 Constructor
 
@@ -59,21 +105,6 @@ Constructor
 See also
 
 https://docs.sentry.io/clientdev/overview/#parsing-the-dsn
-
-#### \_send
-
-Send a message to Sentry server.
-Returns the id of inserted message or dies.
-
-# DESCRIPTION
-
-Module for sending messages to Sentry, open-source cross-platform crash reporting and aggregation platform.
-
-Implements Sentry reporting API https://docs.sentry.io/clientdev/
-
-# NAME
-
-WWW::Sentry
 
 # AUTHOR
 

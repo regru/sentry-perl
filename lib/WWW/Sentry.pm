@@ -14,6 +14,8 @@ Module for sending messages to Sentry, open-source cross-platform crash reportin
 
 Implements Sentry reporting API https://docs.sentry.io/clientdev/
 
+It doesn't form stacktrace, just send it
+
 =head1 SYNOPSIS
 
     my $sentry = Reg::Sentry->new( $dsn, tags => { type => 'autocharge' } );
@@ -27,7 +29,7 @@ Implements Sentry reporting API https://docs.sentry.io/clientdev/
 
     $sentry->error( $error_msg, extra => { var1 => $var1 }, read_sources );
 
-    All this methods return event id as result or die with error
+All this methods return event id as result or die with error
 
     %params:
         message*  -- error message
@@ -42,24 +44,53 @@ Implements Sentry reporting API https://docs.sentry.io/clientdev/
         environment -- environment name, such as ‘production’ or ‘staging’.
         extra     -- hash ref of additional data. Non scalar values are Dumperized forcely
 
-        context_lines_ -- integer. reads source file and add to stacktrace specified amount of code lines around place where error occured.
-        0 by default (do not read source file)
-
     * - required params
 
-    Attributes from other Sentry Interfaces could be also provided as %params, e.g.
+Sentry Interfaces could be also provided as %params, e.g.
 
-        stacktrace -- array ref  or string
-        context_lines -- how much lines from source code will be added
-        user       -- hash ref user info
+    $sentry->info ( 'msg', stacktrace => {
+        frames => [{
+        "abs_path" => "/real/file/name.pl",
+        "filename" => "file/name.pl",
+        "function" => "myfunction",
+        "vars" => {
+            "key" => "value"
+            }
+        }]
+    });
+
+    $sentry->warn ( 'msg', user =>  {
+        "id" => "unique_id",
+        "username" => "my_user",
+        "email" => "foo@example.com",
+        "ip_address" => "127.0.0.1",
+        "subscription" => "basic"
+    });
+
+List of supported additional parameters with link to corresponded Sentry Interfaces
+
+    L<exception|https://docs.sentry.io/clientdev/interfaces/exception/>
+    L<message|https://docs.sentry.io/clientdev/interfaces/message/>
+    L<stacktrace|https://docs.sentry.io/clientdev/interfaces/stacktrace/>
+    L<template|https://docs.sentry.io/clientdev/interfaces/template/>
+    L<breadcrumbs|https://docs.sentry.io/clientdev/interfaces/breadcrumbs/>
+
+    L<contexts|https://docs.sentry.io/clientdev/interfaces/contexts/>
+    L<request|https://docs.sentry.io/clientdev/interfaces/request/>
+    L<threads|https://docs.sentry.io/clientdev/interfaces/threads/>
+    L<user|https://docs.sentry.io/clientdev/interfaces/user/>
+    L<debug_meta|https://docs.sentry.io/clientdev/interfaces/debug/>
+    L<repos|https://docs.sentry.io/clientdev/interfaces/repos/>
+    L<sdk|https://docs.sentry.io/clientdev/interfaces/sdk/>
 
 
-See also
+=head1 SEE ALSO
 
 https://docs.sentry.io/clientdev/overview/#building-the-json-packet
-https://docs.sentry.io/clientdev/attributes/
-https://docs.sentry.io/clientdev/interfaces/
 
+https://docs.sentry.io/clientdev/attributes/
+
+https://docs.sentry.io/clientdev/interfaces/
 
 
 
@@ -68,8 +99,6 @@ https://docs.sentry.io/clientdev/interfaces/
 use LWP::UserAgent;
 use MIME::Base64 'encode_base64';
 use Sys::Hostname;
-use Data::Dump qw( pp );
-use utf8;
 use POSIX;
 use JSON::XS;
 use Sub::Name;
@@ -84,8 +113,21 @@ BEGIN {
     }
 };
 
+my @INTERFACES = (
+    'exception',
+    'stacktrace',
+    'template',
+    'breadcrumbs',
+    'contexts',
+    'request',
+    'threads',
+    'user',
+    'debug_meta',
+    'repos',
+    'sdk'
+);
 
-=head4 new
+=head2 new
 
 Constructor
 
@@ -126,14 +168,9 @@ sub new {
     bless $self, $class;
 }
 
-=head4 _send
 
-Send a message to Sentry server.
-Returns the id of inserted message or dies.
-
-
-
-=cut
+# Send a message to Sentry server.
+# Returns the id of inserted message or dies.
 
 sub _send {
     my ( $self, %params ) = @_;
@@ -188,92 +225,13 @@ sub _build_message {
         server_name => $params{server_name} || hostname(),
         modules     => $params{modules    },
         extra       => $params{extra      } || {},
-        request     => $params{request    } || {},
-        user        => $params{user       } || {},
     };
 
-    if ( $params{stacktrace} ) {
-        # Make frames
-        # # https://docs.sentry.io/clientdev/interfaces/stacktrace/
-        if ( !ref $params{stacktrace} ) {
-            # stacktrace as string
-            # was $data_ref->{extra}{stacktrace} = $params{stacktrace} , why ?
-            $data_ref->{stacktrace} = $params{stacktrace};
-        }
-        elsif ( ref $params{stacktrace} eq 'ARRAY' ) {
-            # Сonverting stacktrace to Sentry format
-
-            # Read strings from sources
-            for my $frame_ref ( @{ $params{stacktrace} // [] } ) {
-
-                if ($self->{context_lines}) {
-                    my %context = eval { _get_context_lines( $frame_ref->{abs_path}, $frame_ref->{lineno}, $self->{context_lines} ) };
-                }
-
-                if ( $@ ) {
-                    %context = ();
-                }
-
-                @$frame_ref{ keys %context } = values %context;
-            }
-
-            $data_ref->{stacktrace} = { frames => $params{stacktrace} };
-        }
+    for (@INTERFACES) {
+        $data_ref->{$_} => $params{$_} if $params{$_};
     }
-
-    my $extra_ref = $data_ref->{extra};
-
-    # Dump non scalars to extra
-    $extra_ref->{ $_ } = pp( $extra_ref->{ $_ } )
-        for grep { ref $extra_ref->{ $_ } } keys %$extra_ref;
 
     return $data_ref;
-}
-
-# getting code strings from sources
-sub _get_context_lines {
-    my ( $package, $line, $pre_post_cnt ) = @_;
-
-    $package =~ s{^lib/}{};
-
-    return  unless $line && $package && $package =~ m{^/};
-
-    --$line; # 0 indexed
-
-    my $content = _read_source_file( $package ) or return;
-
-    my @lines = split "\n", $content;
-
-    my $first = max( $line - $pre_post_cnt, 0       );
-    my $last  = min( $line + $pre_post_cnt, $#lines );
-
-    my $context_line = $lines[ $line ];
-    my @pre  = @lines[ $first .. $line - 1 ];
-    my @post = @lines[ $line + 1 .. $last  ];
-
-    $_ = substr $_, 0, 255  for $context_line, @pre, @post;
-
-    return (
-        context_line => $context_line,
-        post_context => \@post,
-        pre_context  => \@pre,
-    );
-}
-
-# Read content from source file and return in internal encoding
-# Assumes that sources are in utf8 encoding
-sub _read_source_file {
-    my ( $file ) = @_;
-
-    return  unless open my $src, '<', $file;
-    my $content;
-    {
-        local $/ = undef;
-        $content = <$src>;
-    }
-    close $src;
-
-    return utf8::decode($content);
 }
 
 
