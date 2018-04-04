@@ -134,13 +134,16 @@ my @INTERFACES = (
 
 Constructor
 
-    my $sentry = Reg::Sentry->new(
-        'http://public_key:secret_key@example.com/project-id'
+    my $sentry = WWW::Sentry->new(
+        'http://public_key:secret_key@example.com/project-id',
+        sentry_version    => 5 # protocol version can be omitted, 7 by default
     );
 
 See also
 
 https://docs.sentry.io/clientdev/overview/#parsing-the-dsn
+
+https://docs.sentry.io/clientdev/overview/#authentication
 
 
 =cut
@@ -152,6 +155,7 @@ sub new {
 
     my $self = {
         ua => LWP::UserAgent->new( timeout => 10 ),
+        sentry_version => $params{sentry_version} || 7,
         %params,
     };
 
@@ -188,7 +192,7 @@ sub _send {
     my $response = $self->{ua}->post(
         $self->{uri},
         'X-Sentry-Auth' => $auth,
-        'Content-Type' => 'application/octet-stream',
+        'Content-Type' => 'application/json',
         Content => encode_base64( $message ),
     );
 
