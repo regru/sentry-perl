@@ -98,13 +98,16 @@ https://docs.sentry.io/clientdev/interfaces/
 
 Constructor
 
-    my $sentry = Reg::Sentry->new(
-        'http://public_key:secret_key@example.com/project-id'
+    my $sentry = WWW::Sentry->new(
+        'http://public_key:secret_key@example.com/project-id',
+        sentry_version    => 5 # protocol version can be omitted, 7 by default
     );
 
 See also
 
 https://docs.sentry.io/clientdev/overview/#parsing-the-dsn
+
+https://docs.sentry.io/clientdev/overview/#authentication
 
 # AUTHOR
 
