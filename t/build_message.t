@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 # perl -I lib t/build_message.t
 
-use WWW::Sentry;
+use Sentry;
 use Test::More;
 
 my $dsn = 'http://public_key:secret_key@example.com/1234';
 
-my $sentry = WWW::Sentry->new( $dsn, tags => { tag1 => 'val1' } );
+my $sentry = Sentry->new( $dsn, tags => { tag1 => 'val1' } );
 
 is($sentry->{secret_key}, 'secret_key', 'secret_key parsed from dsn');
 is($sentry->{public_key}, 'public_key', 'public_key parsed from dsn');

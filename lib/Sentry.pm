@@ -1,12 +1,12 @@
 # ABSTRACT: Yet another lightweight Sentry client
 
-package WWW::Sentry;
+package Sentry;
 
 =encoding utf8
 
 =head1 NAME
 
-WWW::Sentry
+Sentry
 
 =head1 DESCRIPTION
 
@@ -18,7 +18,7 @@ It doesn't form stacktrace, just send it
 
 =head1 SYNOPSIS
 
-    my $sentry = WWW::Sentry->new( $dsn, tags => { type => 'autocharge' } );
+    my $sentry = Sentry->new( $dsn, tags => { type => 'autocharge' } );
 
     $sentry->fatal( 'msg' );
     $sentry->error( 'msg' );
@@ -134,7 +134,7 @@ my @INTERFACES = (
 
 Constructor
 
-    my $sentry = WWW::Sentry->new(
+    my $sentry = Sentry->new(
         'http://public_key:secret_key@example.com/project-id',
         sentry_version    => 5 # protocol version can be omitted, 7 by default
     );
