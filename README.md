@@ -1,6 +1,6 @@
 # NAME
 
-WWW::Sentry - Yet another lightweight Sentry client
+Sentry - Yet another lightweight Sentry client
 
 # VERSION
 
@@ -8,7 +8,7 @@ version 0.01
 
 # SYNOPSIS
 
-    my $sentry = WWW::Sentry->new( $dsn, tags => { type => 'autocharge' } );
+    my $sentry = Sentry->new( $dsn, tags => { type => 'autocharge' } );
 
     $sentry->fatal( 'msg' );
     $sentry->error( 'msg' );
@@ -84,7 +84,7 @@ It doesn't form stacktrace, just send it
 
 # NAME
 
-WWW::Sentry
+Sentry
 
 # SEE ALSO
 
@@ -98,7 +98,7 @@ https://docs.sentry.io/clientdev/interfaces/
 
 Constructor
 
-    my $sentry = WWW::Sentry->new(
+    my $sentry = Sentry->new(
         'http://public_key:secret_key@example.com/project-id',
         sentry_version    => 5 # protocol version can be omitted, 7 by default
     );
