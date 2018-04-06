@@ -70,19 +70,19 @@ Sentry Interfaces could be also provided as %params, e.g.
 
 List of supported additional parameters with link to corresponded Sentry Interfaces
 
-    L<exception|https://docs.sentry.io/clientdev/interfaces/exception/>
-    L<message|https://docs.sentry.io/clientdev/interfaces/message/>
-    L<stacktrace|https://docs.sentry.io/clientdev/interfaces/stacktrace/>
-    L<template|https://docs.sentry.io/clientdev/interfaces/template/>
-    L<breadcrumbs|https://docs.sentry.io/clientdev/interfaces/breadcrumbs/>
+L<exception|https://docs.sentry.io/clientdev/interfaces/exception/>
+L<message|https://docs.sentry.io/clientdev/interfaces/message/>
+L<stacktrace|https://docs.sentry.io/clientdev/interfaces/stacktrace/>
+L<template|https://docs.sentry.io/clientdev/interfaces/template/>
+L<breadcrumbs|https://docs.sentry.io/clientdev/interfaces/breadcrumbs/>
 
-    L<contexts|https://docs.sentry.io/clientdev/interfaces/contexts/>
-    L<request|https://docs.sentry.io/clientdev/interfaces/request/>
-    L<threads|https://docs.sentry.io/clientdev/interfaces/threads/>
-    L<user|https://docs.sentry.io/clientdev/interfaces/user/>
-    L<debug_meta|https://docs.sentry.io/clientdev/interfaces/debug/>
-    L<repos|https://docs.sentry.io/clientdev/interfaces/repos/>
-    L<sdk|https://docs.sentry.io/clientdev/interfaces/sdk/>
+L<contexts|https://docs.sentry.io/clientdev/interfaces/contexts/>
+L<request|https://docs.sentry.io/clientdev/interfaces/request/>
+L<threads|https://docs.sentry.io/clientdev/interfaces/threads/>
+L<user|https://docs.sentry.io/clientdev/interfaces/user/>
+L<debug_meta|https://docs.sentry.io/clientdev/interfaces/debug/>
+L<repos|https://docs.sentry.io/clientdev/interfaces/repos/>
+L<sdk|https://docs.sentry.io/clientdev/interfaces/sdk/>
 
 
 =head1 SEE ALSO
