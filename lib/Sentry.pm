@@ -231,7 +231,7 @@ sub _build_message {
     };
 
     for (@INTERFACES) {
-        $data_ref->{$_} => $params{$_} if $params{$_};
+        $data_ref->{$_} = $params{$_} if $params{$_};
     }
 
     return $data_ref;
